@@ -1,12 +1,12 @@
-CC:=clang
-CFLAGS:=-O2 -lraylib -Wall -Wextra -g
-
 OBJDIR:=obj
 SRCDIR:=src
-INCDIR:=include
+INCDIR:=raylib/include
 
 SRC=$(wildcard $(SRCDIR)/*.c)
 OBJ=$(SRC:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
+
+CC:=gcc
+CFLAGS:=-O2 -lraylib -Wall -Wextra -g -I$(INCDIR)
 
 all: snake
 

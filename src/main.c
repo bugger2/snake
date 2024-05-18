@@ -1,6 +1,6 @@
 #include "dynarray.h"
+#include "raylib.h"
 #include <stdlib.h>
-#include <raylib.h>
 
 #define min(A, B) (A < B ? A : B)
 #define max(A, B) (A > B ? A : B)
