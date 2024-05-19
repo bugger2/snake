@@ -1,9 +1,8 @@
-#include "raylib.h"
 #include <stdlib.h>
 #include <stdio.h>
-
-#define MIN(A, B) (A < B ? A : B)
-#define MAX(A, B) (A > B ? A : B)
+#include "raylib.h"
+#include "position.h"
+#include "list.h"
 
 // Width of each tile in pixels
 #define TILE_WIDTH 20
@@ -13,13 +12,6 @@
 #define GRID_LENGTH 20
 #define GRID_HEIGHT GRID_LENGTH
 
-static int color_equal(Color color_a, Color color_b) {
-	return color_a.r == color_b.r
-		   && color_a.g == color_b.g
-		   && color_a.b == color_b.b
-		   && color_a.a == color_b.a;
-}
-
 int random_x() {
 	return GetRandomValue(0, GRID_LENGTH-1);
 }
@@ -28,21 +20,9 @@ int random_y() {
 	return GetRandomValue(0, GRID_LENGTH-1);
 }
 
-typedef struct {
-	int x;
-	int y;
-} Position;
-
 void randomize_position(Position* position) {
 	position->x = random_x();
 	position->y = random_y();
-}
-
-void randomize_and_avoid_position(Position* position, Position* obstacle) {
-	randomize_position(position);
-	while(position->x == obstacle->x && position->y == obstacle->y) {
-		randomize_position(position);
-	}
 }
 
 int main() {
@@ -55,39 +35,21 @@ int main() {
 	int frame_count = 0;
 	int game_over = 0;
 
-	enum TileState {
-		EMPTY = 0, // 00
-		APPLE = 1, // 01
-		SNAKE = 2, // 10
-		SNAKE_OVER_APPLE = SNAKE | APPLE // 11
-	};
-
-	short int map[GRID_LENGTH][GRID_HEIGHT] = {EMPTY};
-
-	Position snake = {
+	List snake = new_list(1, (Position) {
 		.x = GRID_LENGTH/2,
 		.y = GRID_HEIGHT/2,
-	};
-	map[snake.x][snake.y] = SNAKE;
+	});
+
+	Direction dir = NOWHERE;
 
 	Position apple = {
 		.x = random_x(),
 		.y = random_y(),
 	};
-	while(snake.x == apple.x && snake.y == apple.y) {
-		apple.x = random_x();
-		apple.y = random_y();
+	Position snake_pos = snake.data[0];
+	while(apple.x == snake_pos.x && apple.y == snake_pos.y) {
+		randomize_position(&apple);
 	}
-	map[apple.x][apple.y] = APPLE;
-
-	typedef enum {
-		UP,
-		DOWN,
-		LEFT,
-		RIGHT,
-		NOWHERE
-	} Direction;
-	Direction dir = NOWHERE;
 
 	/* Main Loop */
 	while(!WindowShouldClose() && !(IsKeyDown(KEY_Q) || IsKeyDown(KEY_ESCAPE))) {
@@ -98,30 +60,12 @@ int main() {
 			ClearBackground(BLACK);
 
 			// Refresh the map
-			Color tile_color;
-			for(int i = 0; i < GRID_LENGTH; i++) {
-				for(int j = 0; j < GRID_HEIGHT; j++) {
-					switch(map[i][j]) {
-						case EMPTY:
-							tile_color = BLACK;
-							break;
-						case APPLE:
-							tile_color = RED;
-							break;
-						case SNAKE:
-						case SNAKE_OVER_APPLE:
-							tile_color = GREEN;
-							break;
-					}
-
-					if(!color_equal(tile_color, BLACK)) {
-						int x = i * TILE_WIDTH;
-						int y = j * TILE_HEIGHT;
-						DrawRectangle(x, y, TILE_WIDTH, TILE_HEIGHT, tile_color);
-					}
-				}
+			DrawRectangle(apple.x*TILE_WIDTH, apple.y*TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT, RED);
+			for(int i = 0; i < (int)(sizeof(snake.data)/sizeof(snake.data[0])); i++) {
+				int x = snake.data[i].x;
+				int y = snake.data[i].y;
+				DrawRectangle(x*TILE_WIDTH, y*TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT, GREEN);
 			}
-			
 
 			// Draw score
 			DrawText(TextFormat("Score: %d", score), 10, 10, 18, RAYWHITE);
@@ -141,43 +85,28 @@ int main() {
 				dir = RIGHT;
 			}
 
+			Position snake_pos = snake.data[0];
+
 			// Update position
 			if(frame_count % 18 == 0) {
-				map[snake.x][snake.y] = EMPTY;
-
-				switch(dir) {
-					case NOWHERE:
-						break;
-					case UP:
-						snake.y--;
-						break;
-					case DOWN:
-						snake.y++;
-						break;
-					case LEFT:
-						snake.x--;
-						break;
-					case RIGHT:
-						snake.x++;
-						break;
-				}
-
-				map[snake.x][snake.y] = SNAKE;
+				snake.data[0] = find_next_pos(&snake_pos, dir);
 
 				frame_count = 0;
 			}
 
 			// Check collision
-			if(snake.x >= GRID_LENGTH || snake.x < 0 || snake.y >= GRID_HEIGHT || snake.y < 0)
+			if(snake_pos.x < 0 || snake_pos.x > GRID_LENGTH || snake_pos.y < 0 || snake_pos.y > GRID_HEIGHT) {
 				game_over = 1;
-
-			if(snake.x == apple.x && snake.y == apple.y) {
-				score++;
-				randomize_and_avoid_position(&apple, &snake);
-				map[apple.x][apple.y] = APPLE;
 			}
 
-			
+			if(snake_pos.x == apple.x && snake_pos.y == apple.y) {
+				score++;
+				randomize_position(&apple);
+				while(apple.x == snake_pos.x && apple.y == snake_pos.y) {
+					randomize_position(&apple);
+				}
+			}
+
 			// Increment frame count
 			frame_count++;
 
@@ -193,17 +122,18 @@ int main() {
 			game_over = 0;
 			score = 0;
 
-			map[snake.x][snake.y] = EMPTY;
-			map[apple.x][apple.y] = EMPTY;
+			free_list(&snake);
+			snake = new_list(1, (Position) {
+				.x = GRID_LENGTH/2,
+				.y = GRID_HEIGHT/2,
+			});
+
+			randomize_position(&apple);
+			while(apple.x == snake_pos.x && apple.y == snake_pos.y) {
+				randomize_position(&apple);
+			}
 
 			dir = NOWHERE;
-
-			snake.x = GRID_LENGTH/2;
-			snake.y = GRID_HEIGHT/2;
-			map[snake.x][snake.y] = SNAKE;
-
-			randomize_and_avoid_position(&apple, &snake);
-			map[apple.x][apple.y] = APPLE;
 		}
 
 		EndDrawing();
