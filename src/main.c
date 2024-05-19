@@ -1,4 +1,3 @@
-#include "dynarray.h"
 #include "raylib.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,10 +7,43 @@
 
 // Width of each tile in pixels
 #define TILE_WIDTH 20
+#define TILE_HEIGHT TILE_WIDTH
 
 // Grid dimensions, keep in mind its 0 based
 #define GRID_LENGTH 20
 #define GRID_HEIGHT GRID_LENGTH
+
+static int color_equal(Color color_a, Color color_b) {
+	return color_a.r == color_b.r
+		   && color_a.g == color_b.g
+		   && color_a.b == color_b.b
+		   && color_a.a == color_b.a;
+}
+
+int random_x() {
+	return GetRandomValue(0, GRID_LENGTH-1);
+}
+
+int random_y() {
+	return GetRandomValue(0, GRID_LENGTH-1);
+}
+
+typedef struct {
+	int x;
+	int y;
+} Position;
+
+void randomize_position(Position* position) {
+	position->x = random_x();
+	position->y = random_y();
+}
+
+void randomize_and_avoid_position(Position* position, Position* obstacle) {
+	randomize_position(position);
+	while(position->x == obstacle->x && position->y == obstacle->y) {
+		randomize_position(position);
+	}
+}
 
 int main() {
 	/* Raylib Setup */
@@ -20,154 +52,132 @@ int main() {
 
 	/* Variables */
 	int score = 0;
-
-	Rectangle apple = {
-		GetRandomValue(0, GRID_LENGTH - 1),
-		GetRandomValue(0, GRID_LENGTH - 1),
-		TILE_WIDTH,
-		TILE_WIDTH,
-	};
-
-	typedef struct Player {
-		int xHead;
-		int yHead;
-		Dynarray xTurnPos; // list of x coordinates for turns. The closer to the begining of the array, the more recent the turn
-		Dynarray yTurnPos; // list of y coordinates for turns. The closer to the begining of the array, the more recent the turn
-		int xTail;
-		int yTail;
-		int xVel;
-		int yVel;
-
-	} Player;
-	Player player = {
-		player.xHead = (GRID_LENGTH / 2),
-		player.yHead = (GRID_HEIGHT / 2),
-		player.xTurnPos = dynarray_create(0),
-		player.yTurnPos = dynarray_create(0),
-		player.xTail = (GRID_LENGTH / 2) + 1,
-		player.yTail = (GRID_HEIGHT / 2) + 1,
-		player.xVel = 0,
-		player.yVel = 0,
-	};
-
 	int frame_count = 0;
-
 	int game_over = 0;
 
+	enum TileState {
+		EMPTY = 0, // 00
+		APPLE = 1, // 01
+		SNAKE = 2, // 10
+		SNAKE_OVER_APPLE = SNAKE | APPLE // 11
+	};
+
+	short int map[GRID_LENGTH][GRID_HEIGHT] = {EMPTY};
+
+	Position snake = {
+		.x = GRID_LENGTH/2,
+		.y = GRID_HEIGHT/2,
+	};
+	map[snake.x][snake.y] = SNAKE;
+
+	Position apple = {
+		.x = random_x(),
+		.y = random_y(),
+	};
+	while(snake.x == apple.x && snake.y == apple.y) {
+		apple.x = random_x();
+		apple.y = random_y();
+	}
+	map[apple.x][apple.y] = APPLE;
+
+	typedef enum {
+		UP,
+		DOWN,
+		LEFT,
+		RIGHT,
+		NOWHERE
+	} Direction;
+	Direction dir = NOWHERE;
 
 	/* Main Loop */
-
 	while(!WindowShouldClose() && !(IsKeyDown(KEY_Q) || IsKeyDown(KEY_ESCAPE))) {
 		BeginDrawing();
-
 
 		if(!game_over) {
 
 			ClearBackground(BLACK);
 
-			// Draw apple
-			DrawRectangle(apple.x * TILE_WIDTH, apple.y * TILE_WIDTH, apple.width, apple.height, RED);
+			// Refresh the map
+			Color tile_color;
+			for(int i = 0; i < GRID_LENGTH; i++) {
+				for(int j = 0; j < GRID_HEIGHT; j++) {
+					switch(map[i][j]) {
+						case EMPTY:
+							tile_color = BLACK;
+							break;
+						case APPLE:
+							tile_color = RED;
+							break;
+						case SNAKE:
+						case SNAKE_OVER_APPLE:
+							tile_color = GREEN;
+							break;
+					}
 
-			/* Draw player */
-			// head
-			if(player.xTurnPos.size > 0) {
-				DrawRectangle(
-							  MIN(player.xHead, player.xTurnPos.ptr[0]) * TILE_WIDTH,
-							  MIN(player.yHead, player.yTurnPos.ptr[0]) * TILE_WIDTH,
-							  abs(player.xHead - player.xTurnPos.ptr[0]) * TILE_WIDTH,
-							  abs(player.yHead - player.yTurnPos.ptr[0]) * TILE_WIDTH,
-							  GREEN
-							  );
-			} else {
-				DrawRectangle(
-							  MIN(player.xHead, player.xTail) * TILE_WIDTH,
-							  MIN(player.yHead, player.yTail) * TILE_WIDTH,
-							  abs(player.xHead - player.xTail) * TILE_WIDTH,
-							  abs(player.yHead - player.yTail) * TILE_WIDTH,
-							  GREEN
-							  );
+					if(!color_equal(tile_color, BLACK)) {
+						int x = i * TILE_WIDTH;
+						int y = j * TILE_HEIGHT;
+						DrawRectangle(x, y, TILE_WIDTH, TILE_HEIGHT, tile_color);
+					}
+				}
 			}
-
-			// body
-			for(int i = 0; i < (signed long)player.xTurnPos.size-1; i++) {
-				DrawRectangle(
-							  MIN(player.xTurnPos.ptr[i], player.xTurnPos.ptr[i+1]) * TILE_WIDTH,
-							  MIN(player.yTurnPos.ptr[i], player.yTurnPos.ptr[i+1]) * TILE_WIDTH,
-							  abs(player.xTurnPos.ptr[i] - player.xTurnPos.ptr[i+1]) * TILE_WIDTH,
-							  abs(player.yTurnPos.ptr[i] - player.yTurnPos.ptr[i+1]) * TILE_WIDTH,
-							  GREEN
-							  );
-			}
-
-			// tail
-			if(player.xTurnPos.size > 0) {
-				DrawRectangle(
-							  MIN(player.xTurnPos.ptr[player.xTurnPos.size-1], player.xTail) * TILE_WIDTH,
-							  MIN(player.yTurnPos.ptr[player.yTurnPos.size-1], player.yTail) * TILE_WIDTH,
-							  abs(player.xTurnPos.ptr[player.xTurnPos.size-1] - player.xTail) * TILE_WIDTH,
-							  abs(player.yTurnPos.ptr[player.yTurnPos.size-1] - player.yTail) * TILE_WIDTH,
-							  GREEN
-							  );
-			}
+			
 
 			// Draw score
 			DrawText(TextFormat("Score: %d", score), 10, 10, 18, RAYWHITE);
 
 			// Keybindings
-			if((IsKeyDown(KEY_W) || IsKeyDown(KEY_K) || IsKeyDown(KEY_UP)) && (score >= 1 ? player.yVel != 1 : true)) {
-				player.yVel = -1;
-				player.xVel = 0;
-				dynarray_prepend(&player.xTurnPos, player.xHead);
-				dynarray_prepend(&player.yTurnPos, player.yHead);
+			int snake_is_lengthy = score > 0;
+			if((IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) && (snake_is_lengthy ? dir != DOWN : true)) {
+				dir = UP;
 			}
-			if((IsKeyDown(KEY_A) || IsKeyDown(KEY_H) || IsKeyDown(KEY_LEFT)) && (score >= 1 ? player.xVel != 1 : true)) {
-				player.xVel = -1;
-				player.yVel = 0;
-				dynarray_prepend(&player.xTurnPos, player.xHead);
-				dynarray_prepend(&player.yTurnPos, player.yHead);
+			if((IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) && (snake_is_lengthy ? dir != RIGHT : true)) {
+				dir = LEFT;
 			}
-			if((IsKeyDown(KEY_S) || IsKeyDown(KEY_J) || IsKeyDown(KEY_DOWN)) && (score >= 1 ? player.yVel != -1 : true)) {
-				player.yVel = 1;
-				player.xVel = 0;
-				dynarray_prepend(&player.xTurnPos, player.xHead);
-				dynarray_prepend(&player.yTurnPos, player.yHead);
+			if((IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) && (snake_is_lengthy ? dir != UP : true)) {
+				dir = DOWN;
 			}
-			if((IsKeyDown(KEY_D) || IsKeyDown(KEY_L) || IsKeyDown(KEY_RIGHT)) && (score >= 1 ? player.xVel != -1 : true)) {
-				player.xVel = 1;
-				player.yVel = 0;
-				dynarray_prepend(&player.xTurnPos, player.xHead);
-				dynarray_prepend(&player.yTurnPos, player.yHead);
+			if((IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) && (snake_is_lengthy ? dir != LEFT : true)) {
+				dir = RIGHT;
 			}
 
 			// Update position
 			if(frame_count % 18 == 0) {
-				
-				player.xHead += player.xVel;
-				player.yHead += player.yVel;
+				map[snake.x][snake.y] = EMPTY;
 
-				player.xTail += player.xVel;
-				player.yTail += player.yVel;
+				switch(dir) {
+					case NOWHERE:
+						break;
+					case UP:
+						snake.y--;
+						break;
+					case DOWN:
+						snake.y++;
+						break;
+					case LEFT:
+						snake.x--;
+						break;
+					case RIGHT:
+						snake.x++;
+						break;
+				}
+
+				map[snake.x][snake.y] = SNAKE;
 
 				frame_count = 0;
 			}
 
 			// Check collision
-			if(player.xHead >= GRID_LENGTH || player.xHead < 0 || player.yHead >= GRID_HEIGHT || player.yHead < 0)
+			if(snake.x >= GRID_LENGTH || snake.x < 0 || snake.y >= GRID_HEIGHT || snake.y < 0)
 				game_over = 1;
 
-			if(score > 0) {
-				if(player.xTail == player.xTurnPos.ptr[player.xTurnPos.size])
-					dynarray_deleteEnd(&player.xTurnPos);
-				if(player.yTail == player.yTurnPos.ptr[player.yTurnPos.size])
-					dynarray_deleteEnd(&player.yTurnPos);
-			}
-
-			if(player.xHead == apple.x && player.yHead == apple.y) {
+			if(snake.x == apple.x && snake.y == apple.y) {
 				score++;
-				apple.x = GetRandomValue(0, GRID_LENGTH - 1);
-				apple.y = GetRandomValue(0, GRID_HEIGHT - 1);
+				randomize_and_avoid_position(&apple, &snake);
+				map[apple.x][apple.y] = APPLE;
 			}
 
+			
 			// Increment frame count
 			frame_count++;
 
@@ -183,23 +193,17 @@ int main() {
 			game_over = 0;
 			score = 0;
 
-			player.xHead = GRID_LENGTH / 2;
-			player.yHead = GRID_LENGTH / 2;
-			player.xTail = player.xHead + 1;
-			player.yTail = player.yHead + 1;
-			player.xVel = 0;
-			player.yVel = 0;
+			map[snake.x][snake.y] = EMPTY;
+			map[apple.x][apple.y] = EMPTY;
 
-			free(player.xTurnPos.ptr);
-			player.xTurnPos.ptr = NULL;
-			player.xTurnPos.size = 0;
-			
-			free(player.yTurnPos.ptr);
-			player.yTurnPos.ptr = NULL;
-			player.yTurnPos.size = 0;
+			dir = NOWHERE;
 
-			apple.x = GetRandomValue(0, GRID_LENGTH - 1);
-			apple.y = GetRandomValue(0, GRID_HEIGHT - 1);
+			snake.x = GRID_LENGTH/2;
+			snake.y = GRID_HEIGHT/2;
+			map[snake.x][snake.y] = SNAKE;
+
+			randomize_and_avoid_position(&apple, &snake);
+			map[apple.x][apple.y] = APPLE;
 		}
 
 		EndDrawing();
