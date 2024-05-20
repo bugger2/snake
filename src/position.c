@@ -1,5 +1,18 @@
 #include "position.h"
 
+int random_x() {
+	return GetRandomValue(0, GRID_LENGTH-1);
+}
+
+int random_y() {
+	return GetRandomValue(0, GRID_LENGTH-1);
+}
+
+void randomize_position(Position* position) {
+	position->x = random_x();
+	position->y = random_y();
+}
+
 Position find_next_pos(Position* pos, Direction dir) {
 	Position ret = {
 		pos->x,

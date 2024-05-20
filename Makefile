@@ -6,7 +6,8 @@ SRC=$(wildcard $(SRCDIR)/*.c)
 OBJ=$(SRC:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
 CC:=gcc
-CFLAGS:=-L./raylib/lib/ -lraylib -Wall -Wextra -g -I$(INCDIR)
+# CFLAGS:=-L./raylib/lib/ -lraylib -Wall -Wextra -g -I$(INCDIR)
+CFLAGS:=-lraylib -Wall -Wextra -g -I$(INCDIR)
 
 all: snake
 

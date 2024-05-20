@@ -4,7 +4,7 @@
 
 List add_list(List* list, Position* value) {
 	list->size++;
-	list->data = (Position*)realloc(list->data, list->size);
+	list->data = (Position*)realloc(list->data, list->size*sizeof(Position));
 	list->data[list->size-1] = *value;
 
 	return *list;
@@ -13,7 +13,7 @@ List add_list(List* list, Position* value) {
 List new_list(int size, ...) {
 	List ret = {
 		.size = size,
-		.data = (Position*)calloc(size, sizeof(Position)),
+		.data = (Position*)malloc(size * sizeof(Position)),
 	};
 	
 	if(ret.data == NULL && size > 0) {
