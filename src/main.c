@@ -119,9 +119,26 @@ int main() {
 				dir = RIGHT;
 			}
 
-			Position snake_pos = snake.data[0];
+			if(IsKeyPressed(KEY_R)) {
+				game_over = 0;
+				score = 0;
+
+				free_list(&snake);
+				snake = new_list(1, (Position) {
+					.x = GRID_LENGTH/2,
+					.y = GRID_HEIGHT/2,
+				});
+
+				do {
+					randomize_position(&apple);
+				} while(apple.x == snake_pos.x && apple.y == snake_pos.y);
+
+				dir = NOWHERE;
+			}
 
 			// Update position
+			Position snake_pos = snake.data[0];
+
 			if(frame_count == 18) {
 				Position bookmark_one = snake.data[0];
 				snake.data[0] = find_next_pos(&snake_pos, dir);
@@ -139,12 +156,13 @@ int main() {
 				frame_count = 0;
 			}
 
-			// Check collision
+			// Check collision with wall and itself
 			if(snake_pos.x < 0 || snake_pos.x > GRID_LENGTH-1 || snake_pos.y < 0 || snake_pos.y > GRID_HEIGHT-1
 			   || snake_intersects_itself(&snake)) {
 				game_over = 1;
 			}
 
+			// Check apple collision
 			if(snake_pos.x == apple.x && snake_pos.y == apple.y) {
 				score++;
 				do {
@@ -171,23 +189,6 @@ int main() {
 		if(game_over) {
 			DrawText("You Lost", ((GRID_LENGTH * TILE_WIDTH) / 2) - 60, ((GRID_HEIGHT * TILE_WIDTH) / 2) - 60, 30, RAYWHITE);
 			DrawText("Press 'r' to Restart", ((GRID_LENGTH * TILE_WIDTH) / 2) - 90, ((GRID_HEIGHT * TILE_WIDTH) / 2) - 30, 20, RAYWHITE);
-		}
-
-		if(IsKeyPressed(KEY_R)) {
-			game_over = 0;
-			score = 0;
-
-			free_list(&snake);
-			snake = new_list(1, (Position) {
-				.x = GRID_LENGTH/2,
-				.y = GRID_HEIGHT/2,
-			});
-
-			do {
-				randomize_position(&apple);
-			} while(apple.x == snake_pos.x && apple.y == snake_pos.y);
-
-			dir = NOWHERE;
 		}
 
 		EndDrawing();
