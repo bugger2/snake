@@ -1,12 +1,12 @@
-OBJDIR:=obj
-SRCDIR:=src
-INCDIR:=raylib/include
+OBJDIR:=./obj
+SRCDIR:=./src
+INCDIR:=./raylib/include
 
 SRC=$(wildcard $(SRCDIR)/*.c)
 OBJ=$(SRC:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
 CC:=gcc
-CFLAGS:=-O2 -L./raylib/lib/ -lraylib -Wall -Wextra -g -I$(INCDIR)
+CFLAGS:=-L./raylib/lib/ -lraylib -Wall -Wextra -g -I$(INCDIR)
 
 all: snake
 
