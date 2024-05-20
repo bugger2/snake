@@ -80,11 +80,26 @@ int main() {
 			ClearBackground(BLACK);
 
 			// Refresh the map
-			DrawRectangle(apple.x*TILE_WIDTH, apple.y*TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT, RED);
+			Rectangle apple_rec = {
+				.x = apple.x*TILE_WIDTH,
+				.y = apple.y*TILE_HEIGHT,
+				.width = TILE_WIDTH,
+				.height = TILE_HEIGHT,
+			};
+			DrawRectangleRec(apple_rec, RED);
+			DrawRectangleLinesEx(apple_rec, 3.0f, MAROON);
+
 			for(int i = 0; i < snake.size; i++) {
 				int x = snake.data[i].x;
 				int y = snake.data[i].y;
-				DrawRectangle(x*TILE_WIDTH, y*TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT, GREEN);
+				Rectangle snake_rec = {
+					.x = x*TILE_WIDTH,
+					.y = y*TILE_HEIGHT,
+					.width = TILE_WIDTH,
+					.height = TILE_HEIGHT,
+				};
+				DrawRectangleRec(snake_rec, GREEN);
+				DrawRectangleLinesEx(snake_rec, 2.0f, DARKGREEN);
 			}
 
 			// Draw score
