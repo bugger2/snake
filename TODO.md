@@ -1,7 +1,3 @@
-# Killing yourself
-
-If you run into yourself, nothing happens right now, but you should die
-
 # Quick hands can bypass the backwards moving blockage
 
 If you time the keys right you can move backwards when you shouldn't.

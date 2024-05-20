@@ -18,6 +18,15 @@ int apple_intersects_snake(Position* apple, List* snake) {
 	return 0;
 }
 
+int snake_intersects_itself(List* snake) {
+	Position head = snake->data[0];
+	for(int i = 1; i < snake->size; i++) {
+		Position body = snake->data[i];
+		if(head.x == body.x && head.y == body.y) return 1;
+	}
+	return 0;
+}
+
 Direction tail_direction(List* snake, Direction head_direction) {
 	if(snake->size <= 1) return head_direction;
 	Position tail_pos = snake->data[snake->size-1];
@@ -116,7 +125,8 @@ int main() {
 			}
 
 			// Check collision
-			if(snake_pos.x < 0 || snake_pos.x > GRID_LENGTH-1 || snake_pos.y < 0 || snake_pos.y > GRID_HEIGHT-1) {
+			if(snake_pos.x < 0 || snake_pos.x > GRID_LENGTH-1 || snake_pos.y < 0 || snake_pos.y > GRID_HEIGHT-1
+			   || snake_intersects_itself(&snake)) {
 				game_over = 1;
 			}
 
