@@ -1,7 +1,5 @@
-# Quick hands can bypass the backwards moving blockage
+# Making moves in quick succession is difficult
 
-If you time the keys right you can move backwards when you shouldn't.
+It is particularly difficult to perform two movements right after each other, since I limited it to one key per frame
 
-For example, if the snake is moving left, you can tap up, then right really quickly and the game will let you move right
-
-This happens because the 'up' tap changes `dir` to `UP`, which then lets you change to right freely, without transitioning to an actual block above the snake, since you tap both keys slower than 144fps, but faster than 8 (144/18) fps, so raylib detects both keypresses, but we don't decide to redraw until after the 8fps refresh.
+Thinking maybe we have an array of 2 or 3 directions to change to, and the first element gets set in the soonest frame, all the other directions get moved forward in the array, and whenever the user pushes a button, the corresponding direction gets sent to the end of the array

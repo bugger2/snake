@@ -54,6 +54,7 @@ int main() {
 	int score = 0;
 	int frame_count = 0;
 	int game_over = 0;
+	int button_hit = 0;
 
 	List snake = new_list(1, (Position) {
 		.x = GRID_LENGTH/2,
@@ -106,34 +107,25 @@ int main() {
 			DrawText(TextFormat("Score: %d", score), 10, 10, 18, RAYWHITE);
 
 			// Keybindings
-			if((IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) && (snake.size > 1 ? dir != DOWN : true)) {
+			if((IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) && (snake.size > 1 ? dir != DOWN : true)
+			   && !button_hit) {
 				dir = UP;
+				button_hit = 1;
 			}
-			if((IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) && (snake.size > 1 ? dir != RIGHT : true)) {
+			if((IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) && (snake.size > 1 ? dir != RIGHT : true)
+			   && !button_hit) {
 				dir = LEFT;
+				button_hit = 1;
 			}
-			if((IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) && (snake.size > 1 ? dir != UP : true)) {
+			if((IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) && (snake.size > 1 ? dir != UP : true)
+			   && !button_hit) {
 				dir = DOWN;
+				button_hit = 1;
 			}
-			if((IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) && (snake.size > 1 ? dir != LEFT : true)) {
+			if((IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) && (snake.size > 1 ? dir != LEFT : true)
+			   && !button_hit) {
 				dir = RIGHT;
-			}
-
-			if(IsKeyPressed(KEY_R)) {
-				game_over = 0;
-				score = 0;
-
-				free_list(&snake);
-				snake = new_list(1, (Position) {
-					.x = GRID_LENGTH/2,
-					.y = GRID_HEIGHT/2,
-				});
-
-				do {
-					randomize_position(&apple);
-				} while(apple.x == snake_pos.x && apple.y == snake_pos.y);
-
-				dir = NOWHERE;
+				button_hit = 1;
 			}
 
 			// Update position
@@ -154,6 +146,7 @@ int main() {
 				}
 
 				frame_count = 0;
+				button_hit = 0;
 			}
 
 			// Check collision with wall and itself
@@ -189,6 +182,24 @@ int main() {
 		if(game_over) {
 			DrawText("You Lost", ((GRID_LENGTH * TILE_WIDTH) / 2) - 60, ((GRID_HEIGHT * TILE_WIDTH) / 2) - 60, 30, RAYWHITE);
 			DrawText("Press 'r' to Restart", ((GRID_LENGTH * TILE_WIDTH) / 2) - 90, ((GRID_HEIGHT * TILE_WIDTH) / 2) - 30, 20, RAYWHITE);
+		}
+
+		if(IsKeyPressed(KEY_R)) {
+			game_over = 0;
+			score = 0;
+			button_hit = 0;
+
+			free_list(&snake);
+			snake = new_list(1, (Position) {
+				.x = GRID_LENGTH/2,
+				.y = GRID_HEIGHT/2,
+			});
+
+			do {
+				randomize_position(&apple);
+			} while(apple.x == snake_pos.x && apple.y == snake_pos.y);
+
+			dir = NOWHERE;
 		}
 
 		EndDrawing();
