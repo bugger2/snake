@@ -11,11 +11,11 @@ typedef struct {
 } Position;
 
 typedef enum {
+	NOWHERE,
 	UP,
 	DOWN,
 	LEFT,
 	RIGHT,
-	NOWHERE
 } Direction;
 
 int random_x();

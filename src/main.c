@@ -8,6 +8,8 @@
 #define TILE_WIDTH 20
 #define TILE_HEIGHT TILE_WIDTH
 
+#define MOVEMENT_BUFFER_LENGTH 3
+
 int apple_intersects_snake(Position* apple, List* snake) {
 	for(int i = 0; i < snake->size; i++) {
 		Position snake_pos = snake->data[i];
@@ -45,7 +47,25 @@ Direction tail_direction(List* snake, Direction head_direction) {
 	}
 }
 
+void add_direction_to_buffer(Direction* buf, Direction dir) {
+	for(int i = 0; i < MOVEMENT_BUFFER_LENGTH; i++) {
+		if(buf[i] == NOWHERE) {
+			buf[i] = dir;
+			return;
+		}
+	}
+}
+
+void consume_direction_from_buffer(Direction* buf) {
+	for(int i = 1; i < MOVEMENT_BUFFER_LENGTH; i++) {
+		buf[i-1] = buf[i];
+	}
+	buf[MOVEMENT_BUFFER_LENGTH-1] = NOWHERE;
+}
+
 int main() {
+	SetTraceLogLevel(LOG_INFO);
+	
 	/* Raylib Setup */
 	InitWindow(GRID_LENGTH * TILE_WIDTH + 1, GRID_HEIGHT * TILE_WIDTH + 1, "Snake");
 	SetTargetFPS(144);
@@ -54,14 +74,16 @@ int main() {
 	int score = 0;
 	int frame_count = 0;
 	int game_over = 0;
-	int button_hit = 0;
 
 	List snake = new_list(1, (Position) {
 		.x = GRID_LENGTH/2,
 		.y = GRID_HEIGHT/2,
 	});
 
-	Direction dir = NOWHERE;
+	Direction movement_buffer[MOVEMENT_BUFFER_LENGTH] = {NOWHERE};
+	/* for(int i = 0; i < MOVEMENT_BUFFER_LENGTH; i++) { */
+	/* 	TraceLog(LOG_DEBUG, TextFormat("%d\n", movement_buffer[i])); */
+	/* } */
 
 	Position apple = {
 		.x = random_x(),
@@ -107,25 +129,21 @@ int main() {
 			DrawText(TextFormat("Score: %d", score), 10, 10, 18, RAYWHITE);
 
 			// Keybindings
-			if((IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) && (snake.size > 1 ? dir != DOWN : true)
-			   && !button_hit) {
-				dir = UP;
-				button_hit = 1;
+			Direction dir = movement_buffer[0];
+			if((IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) && (snake.size > 1 ? dir != DOWN : true)) {
+				add_direction_to_buffer(movement_buffer, UP);
 			}
-			if((IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) && (snake.size > 1 ? dir != RIGHT : true)
-			   && !button_hit) {
-				dir = LEFT;
-				button_hit = 1;
+
+			if((IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) && (snake.size > 1 ? dir != RIGHT : true)) {
+				add_direction_to_buffer(movement_buffer, LEFT);
 			}
-			if((IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) && (snake.size > 1 ? dir != UP : true)
-			   && !button_hit) {
-				dir = DOWN;
-				button_hit = 1;
+
+			if((IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) && (snake.size > 1 ? dir != UP : true)) {
+				add_direction_to_buffer(movement_buffer, DOWN);
 			}
-			if((IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) && (snake.size > 1 ? dir != LEFT : true)
-			   && !button_hit) {
-				dir = RIGHT;
-				button_hit = 1;
+
+			if((IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) && (snake.size > 1 ? dir != LEFT : true)) {
+				add_direction_to_buffer(movement_buffer, RIGHT);
 			}
 
 			// Update position
@@ -133,7 +151,10 @@ int main() {
 
 			if(frame_count == 18) {
 				Position bookmark_one = snake.data[0];
-				snake.data[0] = find_next_pos(&snake_pos, dir);
+				snake.data[0] = find_next_pos(&snake_pos, movement_buffer[0]);
+				if(movement_buffer[1] != NOWHERE) {
+					consume_direction_from_buffer(movement_buffer);
+				}
 
 				if(snake.size > 1) {
 					Position bookmark_two = snake.data[1];
@@ -146,12 +167,12 @@ int main() {
 				}
 
 				frame_count = 0;
-				button_hit = 0;
 			}
 
 			// Check collision with wall and itself
 			if(snake_pos.x < 0 || snake_pos.x > GRID_LENGTH-1 || snake_pos.y < 0 || snake_pos.y > GRID_HEIGHT-1
-			   || snake_intersects_itself(&snake)) {
+			   || snake_intersects_itself(&snake))
+			{
 				game_over = 1;
 			}
 
@@ -187,7 +208,6 @@ int main() {
 		if(IsKeyPressed(KEY_R)) {
 			game_over = 0;
 			score = 0;
-			button_hit = 0;
 
 			free_list(&snake);
 			snake = new_list(1, (Position) {
@@ -199,7 +219,9 @@ int main() {
 				randomize_position(&apple);
 			} while(apple.x == snake_pos.x && apple.y == snake_pos.y);
 
-			dir = NOWHERE;
+			for(int i = 0; i < MOVEMENT_BUFFER_LENGTH; i++) {
+				consume_direction_from_buffer(movement_buffer);
+			}
 		}
 
 		EndDrawing();

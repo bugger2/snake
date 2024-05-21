@@ -1,3 +1,4 @@
+#include "raylib.h"
 #include "position.h"
 
 int random_x() {
@@ -5,7 +6,7 @@ int random_x() {
 }
 
 int random_y() {
-	return GetRandomValue(0, GRID_LENGTH-1);
+	return GetRandomValue(0, GRID_HEIGHT-1);
 }
 
 void randomize_position(Position* position) {
